@@ -104,8 +104,9 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
   <div class="header-actions">
     <span id="acct"></span>
     <button id="postBtn" class="primary" hidden>Post a listing</button>
-    <button id="authBtn">Sign in</button>
-    <button id="registerBtn" class="ghost" hidden>Register</button>
+    <button id="registerBtn" hidden>Register</button>
+    <button id="loginBtn" class="primary">Sign in</button>
+    <button id="logoutBtn" hidden>Sign out</button>
   </div>
 </header>
 
@@ -136,6 +137,7 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
 <div class="hint" id="hint"></div>
 <main class="grid" id="grid"></main>
 
+<!-- POST LISTING DIALOG -->
 <dialog id="postDlg">
   <h2 style="margin:0 0 4px">Post a listing</h2>
   <label>Type</label>
@@ -161,6 +163,7 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
   </div>
 </dialog>
 
+<!-- LOGIN / REGISTER DIALOG -->
 <dialog id="authDlg">
   <h2 id="aTitle" style="margin:0 0 4px">Sign in</h2>
   <div id="nameWrap" hidden>
@@ -181,24 +184,25 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
   </div>
 </dialog>
 
+<!-- CONTACT DIALOG -->
 <dialog id="contactDlg">
   <h2 id="cTitle" style="margin:0 0 8px"></h2>
   <p id="cBody" class="meta"></p>
   <div class="row">
-    <button id="cWa" class="wa-btn" style="background:var(--wa);color:#fff;border-color:var(--wa)">Message on WhatsApp</button>
+    <button id="cWa" style="background:var(--wa);color:#fff;border-color:var(--wa)">Message on WhatsApp</button>
     <button id="cClose">Close</button>
   </div>
 </dialog>
 
 <footer>Meet in public places first and never send money before seeing a place in person.</footer>
 
-<!-- Floating WhatsApp button -->
+<!-- FLOATING WHATSAPP BUTTON -->
 <button id="waFloat" class="wa-float" title="Chat with RoomMatch on WhatsApp" aria-label="Chat on WhatsApp">💬</button>
 
 <script>
 "use strict";
 
-// Business WhatsApp number (E.164 digits only, no '+'). Change to your own.
+// Business WhatsApp number (E.164 digits only, no '+'). Replace with your own.
 const BUSINESS_WA = "14155238886";
 
 const state = { tab: "all", me: null, listings: [], reg: false };
@@ -221,7 +225,21 @@ async function api(path, method = "GET", body) {
   return data;
 }
 
+function updateHeader() {
+  const loggedIn = !!state.me;
+  $("acct").textContent = loggedIn ? "Hi, " + state.me.name : "";
+  $("postBtn").hidden = !loggedIn;
+  $("registerBtn").hidden = loggedIn;
+  $("loginBtn").hidden = loggedIn;
+  $("logoutBtn").hidden = !loggedIn;
+  $("hint").textContent = loggedIn
+    ? ""
+    : "Sign in or register to post listings and save favorites.";
+}
+
 function render() {
+  updateHeader();
+
   const q = $("q").value.trim().toLowerCase();
   const max = parseFloat($("max").value);
   const sort = $("sort").value;
@@ -242,16 +260,6 @@ function render() {
   if (sort === "lo") rows.sort((a, b) => a.price - b.price);
   else if (sort === "hi") rows.sort((a, b) => b.price - a.price);
 
-  // Header state
-  $("acct").textContent = state.me ? "Hi, " + state.me.name : "";
-  $("authBtn").textContent = state.me ? "Sign out" : "Sign in";
-  $("postBtn").hidden = !state.me;
-  $("registerBtn").hidden = !!state.me;
-  $("hint").textContent = state.me
-    ? ""
-    : "Sign in to post listings and save favorites.";
-
-  // Cards
   $("grid").innerHTML = rows.length
     ? rows.map((l) => `
       <article class="card">
@@ -298,6 +306,7 @@ function openAuth(register) {
   $("aSwitch").textContent = register ? "I have an account" : "Create an account";
   $("nameWrap").hidden = !register;
   $("aErr").textContent = "";
+  $("aPw").value = "";
   $("aPw").autocomplete = register ? "new-password" : "current-password";
   $("authDlg").showModal();
   setTimeout(() => (register ? $("aName") : $("aEmail")).focus(), 30);
@@ -305,10 +314,10 @@ function openAuth(register) {
 
 async function submitAuth() {
   const body = {
-    email: $("aEmail").value,
+    email: $("aEmail").value.trim(),
     password: $("aPw").value,
   };
-  if (state.reg) body.name = $("aName").value;
+  if (state.reg) body.name = $("aName").value.trim();
   try {
     const data = await api(state.reg ? "/api/register" : "/api/login", "POST", body);
     state.me = data.user;
@@ -329,6 +338,7 @@ function openPost() {
   }
   $("err").textContent = "";
   $("postDlg").showModal();
+  setTimeout(() => $("fTitle").focus(), 30);
 }
 
 async function submitPost() {
@@ -359,8 +369,7 @@ async function submitPost() {
 function openContact(listing) {
   $("cTitle").textContent = listing.title;
   $("cBody").textContent = "Contact: " + listing.contact;
-  const waBtn = $("cWa");
-  waBtn.onclick = () => {
+  $("cWa").onclick = () => {
     const msg =
       `Hello! I'm interested in your listing: ${listing.title} ` +
       `in ${listing.city} ($${listing.price}/month). Contact: ${listing.contact}`;
@@ -370,24 +379,21 @@ function openContact(listing) {
 }
 
 /* ---------- Event wiring ---------- */
-$("authBtn").onclick = async () => {
-  if (state.me) {
-    try { await api("/api/logout", "POST", {}); } catch (e) {}
-    state.me = null;
-    if (state.tab === "saved" || state.tab === "mine") {
-      state.tab = "all";
-      document.querySelectorAll("#tabs button").forEach((b) =>
-        b.classList.toggle("on", b.dataset.t === "all")
-      );
-    }
-    await load();
-  } else {
-    openAuth(false);
-  }
-};
-
+$("loginBtn").onclick = () => openAuth(false);
 $("registerBtn").onclick = () => openAuth(true);
 $("postBtn").onclick = openPost;
+
+$("logoutBtn").onclick = async () => {
+  try { await api("/api/logout", "POST", {}); } catch (e) {}
+  state.me = null;
+  if (state.tab === "saved" || state.tab === "mine") {
+    state.tab = "all";
+    document.querySelectorAll("#tabs button").forEach((b) =>
+      b.classList.toggle("on", b.dataset.t === "all")
+    );
+  }
+  await load();
+};
 
 $("aSwitch").onclick = () => openAuth(!state.reg);
 $("aCancel").onclick = () => $("authDlg").close();
@@ -460,7 +466,6 @@ $("grid").addEventListener("click", async (e) => {
   }
 });
 
-// Floating WhatsApp button → chat with business
 $("waFloat").addEventListener("click", () => {
   const msg = encodeURIComponent("Hello RoomMatch! I need help finding a place.");
   window.open(`https://wa.me/${BUSINESS_WA}?text=${msg}`, "_blank");
