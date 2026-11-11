@@ -373,7 +373,6 @@ def payment_methods():
 
 @app.post("/api/whatsapp/webhook")
 def whatsapp_webhook():
-    """Handle incoming WhatsApp messages via Twilio webhook."""
     if not twilio_client:
         return err("Twilio not configured", 503)
     incoming_msg = request.form.get("Body", "")
