@@ -73,6 +73,10 @@ def close_db(_):
     if d: d.close()
 
 def init_db():
+    # Ensure the directory for the database exists
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
     c = sqlite3.connect(DB_PATH)
     c.executescript(SCHEMA); c.commit(); c.close()
 init_db()
