@@ -351,7 +351,7 @@ def payment_methods():
         {
             "key": "zelle",
             "name": "Zelle",
-            "instructions": "Transfer to: roommatch@roommatch.example",
+            "instructions": "Transfer to: payments@roommatch.app",
             "fee": LISTING_FEE,
         },
         {
@@ -459,259 +459,412 @@ def internal_error(e):
 
 
 # ---------------------------------------------------------------------------
-# SEED DATA
+# INITIAL INVENTORY
+#
+# Populates a fresh database with real, ready-to-browse listings on first
+# startup. Idempotent: if any listings already exist, this does nothing.
+#
+# Ops note — account passwords (change after first deploy):
+#   admin@roommatch.app  / adminpass123   (admin)
+#   All other accounts:   / password123
 # ---------------------------------------------------------------------------
 
-SEED_USERS = [
+INITIAL_USERS = [
     # email, name, password, is_admin
-    ("admin@roommatch.test", "Admin", "adminpass123", 1),
-    ("alex@roommatch.test", "Alex Rivera", "password123", 0),
-    ("jamie@roommatch.test", "Jamie Chen", "password123", 0),
-    ("morgan@roommatch.test", "Morgan Patel", "password123", 0),
-    ("taylor@roommatch.test", "Taylor Brooks", "password123", 0),
-    ("casey@roommatch.test", "Casey Nguyen", "password123", 0),
-    ("riley@roommatch.test", "Riley Johnson", "password123", 0),
-    ("drew@roommatch.test", "Drew Martinez", "password123", 0),
+    ("admin@roommatch.app", "Jordan Ellis", "adminpass123", 1),
+    ("alex.rivera@roommatch.app", "Alex Rivera", "password123", 0),
+    ("jamie.chen@roommatch.app", "Jamie Chen", "password123", 0),
+    ("morgan.patel@roommatch.app", "Morgan Patel", "password123", 0),
+    ("taylor.brooks@roommatch.app", "Taylor Brooks", "password123", 0),
+    ("casey.nguyen@roommatch.app", "Casey Nguyen", "password123", 0),
+    ("riley.johnson@roommatch.app", "Riley Johnson", "password123", 0),
+    ("drew.martinez@roommatch.app", "Drew Martinez", "password123", 0),
+    ("priya.sharma@roommatch.app", "Priya Sharma", "password123", 0),
+    ("marcus.williams@roommatch.app", "Marcus Williams", "password123", 0),
+    ("sofia.reyes@roommatch.app", "Sofia Reyes", "password123", 0),
+    ("ethan.kim@roommatch.app", "Ethan Kim", "password123", 0),
 ]
 
-# Each tuple: (owner_email, type, title, city, price, description, contact)
-SEED_LISTINGS = [
-    # ------------------------- ROOMS (12) -------------------------
-    ("alex@roommatch.test", "Room",
+# (owner_email, type, title, city, price, description, contact, days_ago)
+INITIAL_LISTINGS = [
+    # ------------------------------ ROOMS ------------------------------
+    ("alex.rivera@roommatch.app", "Room",
      "Sunny Studio in Hell's Kitchen",
      "New York, NY", 1850,
-     "Bright 1BR studio, hardwood floors, walk-in closet. Steps from the C/E "
-     "subway. Building has gym, doorman, and roof deck. Utilities included.",
-     "alex.rivera@email.com"),
+     "Bright 1BR studio with hardwood floors, walk-in closet, and a small "
+     "kitchenette. Steps from the C/E subway. Building has a gym, doorman, "
+     "and shared roof deck. Heat and hot water included. Available now.",
+     "alex.rivera@roommatch.app", 2),
 
-    ("alex@roommatch.test", "Room",
+    ("alex.rivera@roommatch.app", "Room",
      "Private Room in Downtown Brooklyn",
      "Brooklyn, NY", 1300,
-     "Furnished private room in a 3BR walk-up, shared kitchen and bath with "
-     "two friendly roommates. 5 min to Atlantic Terminal. Pet friendly.",
-     "alex.rivera@email.com"),
+     "Furnished private room in a 3BR walk-up shared with two friendly "
+     "roommates. Shared kitchen and bath. 5 minutes to Atlantic Terminal "
+     "(2/3/4/5/B/D/N/Q/R). Pet-friendly building, laundry in basement.",
+     "alex.rivera@roommatch.app", 4),
 
-    ("jamie@roommatch.test", "Room",
+    ("jamie.chen@roommatch.app", "Room",
      "Quiet Room in Astoria",
      "Queens, NY", 1050,
-     "Private room in a shared house, quiet street, off-street parking. "
-     "Laundry on-site. 15 min walk to N/W. Non-smoking preferred.",
-     "jamie.chen@email.com"),
+     "Private room in a shared house on a quiet tree-lined street. "
+     "Off-street parking, laundry on-site. 15-minute walk to the N/W. "
+     "Non-smoking preferred. Utilities split evenly among three tenants.",
+     "jamie.chen@roommatch.app", 5),
 
-    ("jamie@roommatch.test", "Room",
+    ("jamie.chen@roommatch.app", "Room",
      "Modern 1BR in Capitol Hill",
      "Seattle, WA", 1750,
-     "Modern 1BR with in-unit washer/dryer and balcony. Walk to Whole Foods "
-     "and light rail. Cat okay with small deposit.",
-     "jamie.chen@email.com"),
+     "Modern 1BR with in-unit washer/dryer, stainless appliances, and a "
+     "private balcony. Walk to Whole Foods and the light rail. Cat okay "
+     "with a small deposit. 12-month lease, move-in ready.",
+     "jamie.chen@roommatch.app", 6),
 
-    ("morgan@roommatch.test", "Room",
+    ("morgan.patel@roommatch.app", "Room",
      "Sunny Room Near UT Campus",
      "Austin, TX", 900,
-     "Bright room in a 4BR house, 10 min bike to UT. Shared kitchen, backyard "
-     "with grill. Utilities split evenly. Grad students welcome.",
-     "morgan.patel@email.com"),
+     "Bright room in a 4BR house, 10-minute bike to UT Austin. Shared "
+     "kitchen and backyard with grill. Utilities split evenly. Grad "
+     "students and young professionals welcome. Available for fall semester.",
+     "morgan.patel@roommatch.app", 3),
 
-    ("morgan@roommatch.test", "Room",
+    ("morgan.patel@roommatch.app", "Room",
      "Furnished Room in Wicker Park",
      "Chicago, IL", 1100,
-     "Furnished room in a 2BR flat. Exposed brick, hardwood floors, walk to "
-     "Blue Line. 1-year lease preferred, short-term considered.",
-     "morgan.patel@email.com"),
+     "Furnished room in a 2BR flat with exposed brick and hardwood floors. "
+     "Walk to the Blue Line. 1-year lease preferred, short-term considered "
+     "for the right fit. No pets.",
+     "morgan.patel@roommatch.app", 8),
 
-    ("taylor@roommatch.test", "Room",
+    ("taylor.brooks@roommatch.app", "Room",
      "Room in Mission District Victorian",
      "San Francisco, CA", 2100,
-     "Charming room in a 4BR Victorian. Shared kitchen with two roommates. "
-     "Walk to BART, cafes, and Dolores Park. Clean and quiet household.",
-     "taylor.brooks@email.com"),
+     "Charming room in a 4BR Victorian shared with two roommates. Shared "
+     "kitchen with gas range. Walk to BART, cafes, and Dolores Park. Clean, "
+     "quiet household. Utilities and internet included.",
+     "taylor.brooks@roommatch.app", 1),
 
-    ("taylor@roommatch.test", "Room",
+    ("taylor.brooks@roommatch.app", "Room",
      "Private Room in Capitol Hill",
      "Denver, CO", 1200,
-     "Private room in a townhouse. Shared living room, kitchen, and patio. "
-     "Walk to Cheesman Park. Dog-friendly building.",
-     "taylor.brooks@email.com"),
+     "Private room in a townhouse with shared living room, kitchen, and "
+     "patio. Walk to Cheesman Park. Dog-friendly building. Two blocks to "
+     "the 12 bus. Utilities + WiFi included.",
+     "taylor.brooks@roommatch.app", 7),
 
-    ("casey@roommatch.test", "Room",
+    ("casey.nguyen@roommatch.app", "Room",
      "Ocean-view Room in Santa Monica",
      "Santa Monica, CA", 2200,
      "Light-filled room in a 2BR apartment, 3 blocks to the beach. Building "
-     "has pool and gym. 6-month minimum. No pets, sorry.",
-     "casey.nguyen@email.com"),
+     "has a pool and gym. 6-month minimum. No pets, sorry. Utilities "
+     "included. Perfect for a remote worker.",
+     "casey.nguyen@roommatch.app", 9),
 
-    ("casey@roommatch.test", "Room",
+    ("casey.nguyen@roommatch.app", "Room",
      "Cozy Room in Beacon Hill",
      "Boston, MA", 1500,
-     "Historic brownstone, gas fireplace, bay windows. Shared with one other "
-     "professional. Heat and hot water included. Walk to MGH.",
-     "casey.nguyen@email.com"),
+     "Historic brownstone with gas fireplace and bay windows. Shared with "
+     "one other professional. Heat and hot water included. Walk to MGH "
+     "and the Red Line. Available September 1.",
+     "casey.nguyen@roommatch.app", 10),
 
-    ("riley@roommatch.test", "Room",
+    ("riley.johnson@roommatch.app", "Room",
      "Modern Room Near Midtown",
      "Atlanta, GA", 1150,
-     "Room in a new construction high-rise. Rooftop pool, gym, co-working "
-     "lounge. 5 min walk to MARTA. Internet included.",
-     "riley.johnson@email.com"),
+     "Room in a new construction high-rise with rooftop pool, gym, and "
+     "co-working lounge. 5-minute walk to MARTA. Internet included. "
+     "12-month lease. Garage parking available for $75/mo.",
+     "riley.johnson@roommatch.app", 11),
 
-    ("riley@roommatch.test", "Room",
+    ("riley.johnson@roommatch.app", "Room",
      "Bright Room in Wynwood",
      "Miami, FL", 1400,
-     "Bright room in a 2BR apartment near Wynwood Walls. Shared kitchen and "
-     "living room. 10 min drive to the beach. Utilities included.",
-     "riley.johnson@email.com"),
+     "Bright room in a 2BR apartment near Wynwood Walls. Shared kitchen "
+     "and living room. 10-minute drive to the beach. Utilities included. "
+     "Furnished common areas, unfurnished bedroom.",
+     "riley.johnson@roommatch.app", 12),
 
-    # ------------------------- ROOMMATES (10) -------------------------
-    ("drew@roommatch.test", "Roommate",
-     "Looking for roommate in Bushwick",
+    ("priya.sharma@roommatch.app", "Room",
+     "Furnished Room in Nob Hill",
+     "San Francisco, CA", 1950,
+     "Furnished room in a 3BR flat in Nob Hill. Shared with two quiet "
+     "professionals. Cable car at the corner, walk to Union Square. "
+     "Utilities + internet included. No smoking.",
+     "priya.sharma@roommatch.app", 3),
+
+    ("marcus.williams@roommatch.app", "Room",
+     "Private Room in Queen Village",
+     "Philadelphia, PA", 850,
+     "Private room in a 3BR rowhouse shared with two roommates. Fenced "
+     "backyard, washer/dryer in unit. Walk to South Street and the Italian "
+     "Market. Cat okay. Utilities split three ways.",
+     "marcus.williams@roommatch.app", 6),
+
+    ("sofia.reyes@roommatch.app", "Room",
+     "Sunny Room in North Loop",
+     "Minneapolis, MN", 950,
+     "Sunny room in a modern 2BR near Target Field. Shared with one other "
+     "professional. In-unit laundry, bike storage, rooftop deck. Winter "
+     "is cozy thanks to great insulation. Available now.",
+     "sofia.reyes@roommatch.app", 4),
+
+    ("ethan.kim@roommatch.app", "Room",
+     "Room Near Pearl District",
+     "Portland, OR", 1100,
+     "Room in a bright 2BR loft in the Pearl District. Shared with one "
+     "roommate. Walk to Powell's Books, breweries, and the streetcar. "
+     "Bike storage in the building. No pets.",
+     "ethan.kim@roommatch.app", 8),
+
+    # ---------------------------- ROOMMATES ----------------------------
+    ("drew.martinez@roommatch.app", "Roommate",
+     "Looking for a roommate in Bushwick",
      "Brooklyn, NY", 950,
-     "Two professionals seeking a third to share a 3BR loft. Rent $950/mo + "
-     "utilities. Clean, respectful, no drama. Must be employed and pet-free.",
-     "drew.martinez@email.com"),
+     "Two professionals seeking a third to share a 3BR loft. Rent $950/mo "
+     "+ utilities. Clean, respectful, no drama. Must be employed and "
+     "pet-free. Move-in October 1, 12-month lease.",
+     "drew.martinez@roommatch.app", 1),
 
-    ("drew@roommatch.test", "Roommate",
+    ("drew.martinez@roommatch.app", "Roommate",
      "Female roommate wanted in Lakeview",
      "Chicago, IL", 900,
-     "28F professional seeking a female roommate for a 2BR near Wrigley. Rent "
-     "$900 + utilities. Night owl okay. Shared Netflix and coffee. Non-smoker.",
-     "drew.martinez@email.com"),
+     "28F professional seeking a female roommate for a 2BR near Wrigley "
+     "Field. Rent $900 + utilities. Night owl okay. Shared Netflix and "
+     "coffee. Non-smoker preferred, no pets.",
+     "drew.martinez@roommatch.app", 5),
 
-    ("alex@roommatch.test", "Roommate",
+    ("alex.rivera@roommatch.app", "Roommate",
      "Roommate needed in Silver Lake",
      "Los Angeles, CA", 1100,
-     "Creative professional looking for a roommate for a 2BR bungalow. Rent "
-     "$1100 + utilities. Vegetarian household. Street parking.",
-     "alex.rivera@email.com"),
+     "Creative professional looking for a roommate for a 2BR bungalow. "
+     "Rent $1100 + utilities. Vegetarian household. Street parking. "
+     "Backyard with lemon tree. Move-in ASAP.",
+     "alex.rivera@roommatch.app", 2),
 
-    ("jamie@roommatch.test", "Roommate",
+    ("jamie.chen@roommatch.app", "Roommate",
      "Grad student seeking roommate",
      "Boston, MA", 1200,
-     "PhD student looking for a quiet roommate in a 2BR in Cambridge. $1200/mo "
-     "+ utilities. No parties. Study-heavy household. Cat okay.",
-     "jamie.chen@email.com"),
+     "PhD student looking for a quiet roommate in a 2BR in Cambridge. "
+     "$1200/mo + utilities. No parties. Study-heavy household. Cat okay. "
+     "Walk to Harvard and MIT shuttles.",
+     "jamie.chen@roommatch.app", 7),
 
-    ("morgan@roommatch.test", "Roommate",
+    ("morgan.patel@roommatch.app", "Roommate",
      "Roommate wanted in South Congress",
      "Austin, TX", 850,
      "Looking for a roommate for a 2BR near SoCo. $850 + utilities. Chill "
-     "household, weekend BBQs. Must love dogs, we have one.",
-     "morgan.patel@email.com"),
+     "household, weekend BBQs. Must love dogs—we have one. Street parking. "
+     "6-month minimum.",
+     "morgan.patel@roommatch.app", 3),
 
-    ("taylor@roommatch.test", "Roommate",
+    ("taylor.brooks@roommatch.app", "Roommate",
      "Clean roommate needed in Fremont",
      "Seattle, WA", 1000,
-     "Seeking a clean, respectful roommate for a 2BR near Google campus. "
-     "$1000 + utilities. No smoking inside. Quiet weeknight household.",
-     "taylor.brooks@email.com"),
+     "Seeking a clean, respectful roommate for a 2BR near the Google "
+     "campus. $1000 + utilities. No smoking inside. Quiet weeknight "
+     "household. Move-in October 15.",
+     "taylor.brooks@roommatch.app", 9),
 
-    ("casey@roommatch.test", "Roommate",
-     "Roommate for 2BR in Mission",
+    ("casey.nguyen@roommatch.app", "Roommate",
+     "Roommate for 2BR in the Mission",
      "San Francisco, CA", 1600,
-     "Looking for a friendly roommate in the Mission. $1600/mo + utilities. "
-     "Shared kitchen and living room. 9-5 professional preferred.",
-     "casey.nguyen@email.com"),
+     "Looking for a friendly roommate in the Mission. $1600/mo + "
+     "utilities. Shared kitchen and living room. 9-to-5 professional "
+     "preferred. No pets. Laundry in unit.",
+     "casey.nguyen@roommatch.app", 4),
 
-    ("riley@roommatch.test", "Roommate",
+    ("riley.johnson@roommatch.app", "Roommate",
      "Roommate wanted in Capitol Hill",
      "Denver, CO", 800,
      "Three people looking for a fourth in a 4BR house. $800 + utilities. "
-     "Shared chores, quiet household, mountain weekend trips.",
-     "riley.johnson@email.com"),
+     "Shared chores, quiet household, mountain weekend trips. Garage "
+     "parking. Dog-friendly.",
+     "riley.johnson@roommatch.app", 6),
 
-    ("drew@roommatch.test", "Roommate",
+    ("drew.martinez@roommatch.app", "Roommate",
      "Looking for a roommate near U Street",
      "Washington, DC", 1050,
-     "Government professional seeking a roommate for a 2BR in Shaw. $1050 + "
-     "utilities. Walk to metro. No pets, clean and quiet preferred.",
-     "drew.martinez@email.com"),
+     "Government professional seeking a roommate for a 2BR in Shaw. "
+     "$1050 + utilities. Walk to metro. No pets, clean and quiet "
+     "preferred. Move-in November 1.",
+     "drew.martinez@roommatch.app", 10),
 
-    ("taylor@roommatch.test", "Roommate",
+    ("taylor.brooks@roommatch.app", "Roommate",
      "Roommate in Philadelphia for fall",
      "Philadelphia, PA", 750,
      "Seeking a roommate for a 2BR in Fishtown starting September. $750 + "
-     "utilities. Bike-friendly, two cats. Monthly board game night.",
-     "taylor.brooks@email.com"),
+     "utilities. Bike-friendly, two cats. Monthly board game night. "
+     "Garden out back.",
+     "taylor.brooks@roommatch.app", 11),
 
-    # ------------------------- SUBLETS (8) -------------------------
-    ("casey@roommatch.test", "Sublet",
+    ("priya.sharma@roommatch.app", "Roommate",
+     "Roommate wanted in Logan Square",
+     "Chicago, IL", 1050,
+     "31F seeking a roommate for a 2BR in Logan Square. $1050 + utilities. "
+     "Non-smoker, no pets. Shared kitchen and living room. Walk to the "
+     "Blue Line. 12-month lease.",
+     "priya.sharma@roommatch.app", 2),
+
+    ("marcus.williams@roommatch.app", "Roommate",
+     "Roommate for 2BR in Williamsburg",
+     "Brooklyn, NY", 1400,
+     "Looking for a roommate for a 2BR in Williamsburg. $1400 + utilities. "
+     "Shared with one other professional. Walk to the L train. No pets, "
+     "non-smoker. Move-in October.",
+     "marcus.williams@roommatch.app", 5),
+
+    ("sofia.reyes@roommatch.app", "Roommate",
+     "Female roommate wanted in Uptown",
+     "Minneapolis, MN", 800,
+     "27F seeking a female roommate for a 2BR in Uptown. $800 + utilities. "
+     "Cat-friendly, quiet household. Walk to Lake Calhoun. Non-smoker.",
+     "sofia.reyes@roommatch.app", 8),
+
+    ("ethan.kim@roommatch.app", "Roommate",
+     "Roommate near Hawthorne",
+     "Portland, OR", 950,
+     "Seeking a roommate for a 2BR near Hawthorne. $950 + utilities. "
+     "Bike storage, garden in back. Quiet weeknight household, weekend "
+     "hiking. Non-smoker, no pets.",
+     "ethan.kim@roommatch.app", 12),
+
+    # ----------------------------- SUBLETS -----------------------------
+    ("casey.nguyen@roommatch.app", "Sublet",
      "Furnished sublet in Tribeca",
      "New York, NY", 3000,
-     "Fully furnished 1BR sublet in a luxury building. 3-month lease, Feb-Apr. "
-     "Doorman, gym, laundry. All utilities included.",
-     "casey.nguyen@email.com"),
+     "Fully furnished 1BR sublet in a luxury building. 3-month lease, "
+     "Feb–Apr. Doorman, gym, laundry. All utilities included. Steps from "
+     "the 1/2/3 and A/C/E. Perfect for a short-term work assignment.",
+     "casey.nguyen@roommatch.app", 1),
 
-    ("casey@roommatch.test", "Sublet",
+    ("casey.nguyen@roommatch.app", "Sublet",
      "Summer sublet near Harvard",
      "Cambridge, MA", 1800,
-     "Bright 1BR sublet, June-August. 5 min walk to Harvard Yard. Fully "
-     "furnished with utilities included. Perfect for a summer internship.",
-     "casey.nguyen@email.com"),
+     "Bright 1BR sublet, June–August. 5-minute walk to Harvard Yard. "
+     "Fully furnished with utilities included. Perfect for a summer "
+     "internship. Central AC, in-unit laundry.",
+     "casey.nguyen@roommatch.app", 4),
 
-    ("alex@roommatch.test", "Sublet",
+    ("alex.rivera@roommatch.app", "Sublet",
      "Short-term sublet in Bed-Stuy",
      "Brooklyn, NY", 1600,
      "Charming sublet in a historic brownstone. 6-month lease, flexible "
-     "start. Hardwood floors, shared garden, cat-friendly.",
-     "alex.rivera@email.com"),
+     "start. Hardwood floors, shared garden, cat-friendly. Walk to the "
+     "A/C and J/M/Z. Utilities included.",
+     "alex.rivera@roommatch.app", 7),
 
-    ("jamie@roommatch.test", "Sublet",
+    ("jamie.chen@roommatch.app", "Sublet",
      "Sublet in Capitol Hill townhouse",
      "Seattle, WA", 1500,
-     "Nice sublet in a Capitol Hill townhouse. 3-month lease. Close to bars, "
-     "restaurants, and light rail. Utilities + WiFi included.",
-     "jamie.chen@email.com"),
+     "Nice sublet in a Capitol Hill townhouse. 3-month lease. Close to "
+     "bars, restaurants, and light rail. Utilities + WiFi included. "
+     "Furnished with a queen bed and desk.",
+     "jamie.chen@roommatch.app", 9),
 
-    ("morgan@roommatch.test", "Sublet",
+    ("morgan.patel@roommatch.app", "Sublet",
      "Summer sublet in Logan Square",
      "Chicago, IL", 1200,
-     "Furnished sublet, May-August. 1BR + office. Walk to Blue Line. Perfect "
-     "for interns or summer travelers. No smoking.",
-     "morgan.patel@email.com"),
+     "Furnished sublet, May–August. 1BR + office. Walk to the Blue Line. "
+     "Perfect for interns or summer travelers. No smoking. Utilities "
+     "included. AC in every room.",
+     "morgan.patel@roommatch.app", 11),
 
-    ("taylor@roommatch.test", "Sublet",
+    ("taylor.brooks@roommatch.app", "Sublet",
      "Downtown LA sublet with view",
      "Los Angeles, CA", 2000,
-     "High-rise sublet with skyline views. 4-month lease. Pool, gym, valet "
-     "parking. Walk to Crypto.com Arena and Whole Foods.",
-     "taylor.brooks@email.com"),
+     "High-rise sublet with skyline views. 4-month lease. Pool, gym, "
+     "valet parking. Walk to Crypto.com Arena and Whole Foods. Furnished, "
+     "utilities included.",
+     "taylor.brooks@roommatch.app", 2),
 
-    ("riley@roommatch.test", "Sublet",
+    ("riley.johnson@roommatch.app", "Sublet",
      "Corporate sublet in Midtown",
      "New York, NY", 2800,
      "Corporate-style sublet, 1-month minimum. All utilities and weekly "
-     "cleaning included. Steps from Grand Central.",
-     "riley.johnson@email.com"),
+     "cleaning included. Steps from Grand Central. Furnished with a queen "
+     "bed and workspace. Perfect for business travel.",
+     "riley.johnson@roommatch.app", 5),
 
-    ("drew@roommatch.test", "Sublet",
+    ("drew.martinez@roommatch.app", "Sublet",
      "Furnished sublet near Vanderbilt",
      "Nashville, TN", 1400,
      "3-month sublet, furnished, near Vanderbilt. 2BR townhome. Fenced "
-     "backyard. Perfect for traveling nurses or visiting faculty.",
-     "drew.martinez@email.com"),
+     "backyard. Perfect for traveling nurses or visiting faculty. "
+     "Utilities + WiFi included.",
+     "drew.martinez@roommatch.app", 8),
+
+    ("priya.sharma@roommatch.app", "Sublet",
+     "Sublet in Pacific Heights",
+     "San Francisco, CA", 2400,
+     "Furnished 1BR sublet in Pacific Heights, 3-month lease. Walk to "
+     "Fillmore Street and the Presidio. Utilities included. No pets. "
+     "Perfect for a short-term relocation.",
+     "priya.sharma@roommatch.app", 3),
+
+    ("marcus.williams@roommatch.app", "Sublet",
+     "Summer sublet in Old City",
+     "Philadelphia, PA", 1300,
+     "Furnished 1BR sublet in Old City, June–August. Walk to Independence "
+     "Hall and the Market–Frankford line. Utilities included. Ideal for "
+     "summer interns.",
+     "marcus.williams@roommatch.app", 6),
+
+    ("sofia.reyes@roommatch.app", "Sublet",
+     "Winter sublet in North Loop",
+     "Minneapolis, MN", 1100,
+     "Furnished 1BR sublet in the North Loop, December–February. Walk to "
+     "Target Field and the light rail. Utilities included. Perfect for "
+     "a winter contract.",
+     "sofia.reyes@roommatch.app", 10),
+
+    ("ethan.kim@roommatch.app", "Sublet",
+     "Sublet near Alberta Arts",
+     "Portland, OR", 1250,
+     "Furnished 1BR sublet near Alberta Arts, 3-month lease. Walk to "
+     "coffee shops and galleries. Utilities included. Bike storage in "
+     "the basement.",
+     "ethan.kim@roommatch.app", 12),
+
+    ("alex.rivera@roommatch.app", "Sublet",
+     "Short-term sublet in Astoria",
+     "Queens, NY", 1450,
+     "Furnished 1BR sublet in Astoria, 2-month minimum. Walk to the N/W. "
+     "Utilities included. Great for a short NYC stay. No pets. Available "
+     "immediately.",
+     "alex.rivera@roommatch.app", 13),
+
+    ("jamie.chen@roommatch.app", "Sublet",
+     "Fall sublet in Ballard",
+     "Seattle, WA", 1400,
+     "Furnished 1BR sublet in Ballard, September–November. Walk to the "
+     "Sunday Farmers Market and breweries. Utilities included. No pets. "
+     "Quiet street.",
+     "jamie.chen@roommatch.app", 14),
 ]
 
 
-def seed():
+def load_initial_inventory():
+    """Populate a fresh database with listings on first startup.
+
+    Idempotent: if any listings already exist, this returns immediately
+    without touching the database.
+    """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
-    c.execute("SELECT COUNT(*) FROM listings")
-    if c.fetchone()[0] > 0:
-        print("Seed data already present — skipping.")
+    existing = c.execute("SELECT COUNT(*) FROM listings").fetchone()[0]
+    if existing > 0:
         conn.close()
         return
 
-    print("Seeding demo users and listings...")
-    email_to_id = {}
     now = int(time.time())
+    email_to_id = {}
 
-    for email, name, pw, is_admin in SEED_USERS:
-        existing = c.execute(
-            "SELECT id FROM users WHERE email=?", (email,)
-        ).fetchone()
-        if existing:
-            email_to_id[email] = existing["id"]
+    for email, name, pw, is_admin in INITIAL_USERS:
+        row = c.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+        if row:
+            email_to_id[email] = row["id"]
             continue
         cur = c.execute(
             "INSERT INTO users(email,name,password_hash,created_at,is_admin) "
@@ -720,11 +873,9 @@ def seed():
         )
         email_to_id[email] = cur.lastrowid
 
-    # Insert listings; stagger created_at so the "Newest" sort is meaningful
-    base_ts = now - (len(SEED_LISTINGS) * 3600)
-    for i, (owner_email, ltype, title, city, price, desc, contact) in enumerate(SEED_LISTINGS):
+    for owner_email, ltype, title, city, price, desc, contact, days_ago in INITIAL_LISTINGS:
         owner_id = email_to_id[owner_email]
-        created = base_ts + (i * 3600)  # 1 hour apart, oldest first
+        created = now - (days_ago * 86400) + (hash(title) % 3600)
         c.execute(
             """INSERT INTO listings
             (user_id, type, title, city, price, description, contact, created_at,
@@ -735,27 +886,19 @@ def seed():
         )
 
     conn.commit()
-    counts = {
-        row["type"]: row["n"]
-        for row in c.execute(
-            "SELECT type, COUNT(*) AS n FROM listings GROUP BY type"
-        ).fetchall()
-    }
+    total = c.execute("SELECT COUNT(*) FROM listings").fetchone()[0]
     conn.close()
+    print(f"Inventory loaded: {total} listings across {len(INITIAL_USERS)} accounts.")
 
-    print(
-        f"Seeded {len(SEED_USERS)} users and {len(SEED_LISTINGS)} listings "
-        f"({counts.get('Room', 0)} rooms, "
-        f"{counts.get('Roommate', 0)} roommates, "
-        f"{counts.get('Sublet', 0)} sublets)."
-    )
-    print("Demo logins (password shown after email):")
-    for email, _, pw, is_admin in SEED_USERS:
-        tag = " [admin]" if is_admin else ""
-        print(f"  {email} / {pw}{tag}")
+
+# Load inventory on every app startup. Idempotent — skips if data exists.
+# Runs under gunicorn/WSGI as well as `python app.py`.
+try:
+    load_initial_inventory()
+except Exception as e:
+    print(f"Inventory load skipped: {e}")
 
 
 if __name__ == "__main__":
-    seed()
     print("\nRoomMatch running at http://localhost:5000\n")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
