@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RoomMatch – Rooms, Roommates & Sublets</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1a2233;--muted:#5d6778;--line:#e1e5ec;--accent:#2563eb;--accent-text:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10141c;--card:#1a2030;--text:#e8ecf4;--muted:#9aa5b8;--line:#2b3347;--accent:#5b8cff;--accent-text:#0b1020;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10141c;--card:#1a2030;--text:#e8ecf4;--muted:#9aa5b8;--line:#2b3347;--accent:#5b8cff;--accent-text:#0b1020;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.logo{font-weight:800;font-size:20px}.logo span{color:var(--accent)}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px}
+button.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
+.hero{text-align:center;padding:36px 20px 20px;max-width:760px;margin:auto}
+.hero h1{margin:0 0 8px;font-size:clamp(26px,5vw,38px)}
+.hero p{color:var(--muted);margin:0}
+.filters{max-width:960px;margin:16px auto;padding:0 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+input,select,textarea{font:inherit;width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+.tabs{max-width:960px;margin:0 auto;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap}
+.tabs button.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.grid{max-width:960px;margin:16px auto 40px;padding:0 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.tag{align-self:flex-start;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
+.price{font-size:22px;font-weight:800}.price small{font-weight:400;color:var(--muted);font-size:14px}
+.card h3{margin:0;font-size:17px}.meta{color:var(--muted);font-size:14px}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text);width:min(460px,92vw);padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+label{display:block;font-size:14px;margin:10px 0 4px;color:var(--muted)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+#acct{font-size:14px;color:var(--muted)}.hint{max-width:960px;margin:0 auto 8px;padding:0 16px;color:var(--muted);font-size:14px}.row2{display:flex;gap:8px}.row2 button{flex:1}.fav{font-size:18px;line-height:1;padding:6px 10px}.fav.on{color:#e11d48}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Room<span>Match</span></div>
+  <div style="display:flex;gap:12px;align-items:center"><span id="acct"></span><button id="authBtn">Sign in</button><button class="primary" id="postBtn">+ Post a listing</button></div>
+</header>
+
+<section class="hero">
+  <h1>Find a room, a roommate, or a sublet</h1>
+  <p>Browse listings from people near you. Filter by city and budget, then reach out directly.</p>
+</section>
+
+<div class="tabs" id="tabs">
+  <button data-t="all" class="on">All</button>
+  <button data-t="Room">Rooms</button>
+  <button data-t="Roommate">Roommates</button>
+  <button data-t="Sublet">Sublets</button>
+  <button data-t="saved">♥ Saved</button>
+  <button data-t="mine">My listings</button>
+</div>
+
+<div class="filters">
+  <input id="q" placeholder="Search city or keyword">
+  <input id="max" type="number" min="0" placeholder="Max price / month">
+  <select id="sort"><option value="new">Newest</option><option value="lo">Price: low to high</option><option value="hi">Price: high to low</option></select>
+</div>
+
+<div class="hint" id="hint"></div>
+<main class="grid" id="grid"></main>
+
+<dialog id="postDlg">
+  <h2 style="margin:0 0 4px">Post a listing</h2>
+  <label>Type</label>
+  <select id="fType"><option>Room</option><option>Roommate</option><option>Sublet</option></select>
+  <label>Title</label><input id="fTitle" placeholder="Sunny room near campus">
+  <label>City / area</label><input id="fCity" placeholder="Austin, TX">
+  <label>Monthly price</label><input id="fPrice" type="number" min="0">
+  <label>Details</label><textarea id="fDesc" rows="3" placeholder="Move-in date, amenities, house rules…"></textarea>
+  <label>Contact (email or phone)</label><input id="fContact">
+  <div class="row"><button id="cancel">Cancel</button><button class="primary" id="save">Publish</button></div>
+</dialog>
+
+<dialog id="authDlg">
+  <h2 id="aTitle" style="margin:0 0 4px">Sign in</h2>
+  <div id="nameWrap" hidden><label>Name</label><input id="aName" autocomplete="name"></div>
+  <label>Email</label><input id="aEmail" type="email" autocomplete="email">
+  <label>Password</label><input id="aPw" type="password" autocomplete="current-password" placeholder="At least 8 characters">
+  <p id="aErr" style="color:#e11d48;font-size:14px;margin:8px 0 0" role="alert"></p>
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <button id="aSwitch" type="button" style="border:0;background:none;color:var(--accent)">Create an account</button>
+    <span style="display:flex;gap:8px"><button id="aCancel" type="button">Cancel</button><button class="primary" id="aGo" type="button">Sign in</button></span>
+  </div>
+</dialog>
+
+<dialog id="contactDlg">
+  <h2 id="cTitle" style="margin:0 0 8px"></h2>
+  <p id="cBody" class="meta"></p>
+  <div class="row"><button id="cClose">Close</button></div>
+</dialog>
+
+<footer>Meet in public places first and never send money before seeing a place in person.</footer>
+
+<script>
+let tab="all",me=null,L=[],reg=false;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function api(path,method="GET",body){
+  const r=await fetch(path,{method,credentials:"same-origin",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Something went wrong");
+  return d;
+}
+function render(){
+  const q=$("q").value.trim().toLowerCase(),max=parseFloat($("max").value),s=$("sort").value;
+  let r=L.filter(l=>(tab==="all"||(tab==="saved"&&l.saved)||(tab==="mine"&&l.mine)||l.type===tab)
+    &&(!q||(l.city+" "+l.title+" "+l.desc).toLowerCase().includes(q))&&(isNaN(max)||l.price<=max));
+  if(s==="lo")r.sort((a,b)=>a.price-b.price);else if(s==="hi")r.sort((a,b)=>b.price-a.price);
+  $("acct").textContent=me?"Hi, "+me.name:"";
+  $("authBtn").textContent=me?"Sign out":"Sign in";
+  $("hint").textContent=me?"":"Sign in to post listings and save favorites.";
+  $("grid").innerHTML=r.length?r.map(l=>`<article class="card">
+    <span class="tag">${esc(l.type)}</span><h3>${esc(l.title)}</h3>
+    <div class="price">$${Number(l.price).toLocaleString()} <small>/ month</small></div>
+    <div class="meta">${esc(l.city)} · by ${esc(l.owner_name)}</div>
+    <p style="margin:0">${esc(l.desc)}</p>
+    <div class="row2"><button class="primary" data-c="${l.id}">Contact</button>
+<button class="wa-btn" data-id="${l.id}" title="WhatsApp">💬</button>
+    ${me?`<button class="fav ${l.saved?"on":""}" data-f="${l.id}" title="Save">♥</button>`:""}
+    ${l.mine?`<button data-d="${l.id}">Delete</button>`:""}</div></article>`).join(""):'<div class="empty">No listings here yet.</div>';
+}
+async function load(){try{L=(await api("/api/listings")).listings}catch(e){L=[]}render()}
+function needAuth(){openAuth(false)}
+function openAuth(r){reg=r;$("aTitle").textContent=r?"Create account":"Sign in";$("aGo").textContent=r?"Sign up":"Sign in";
+  $("aSwitch").textContent=r?"I have an account":"Create an account";$("nameWrap").hidden=!r;$("aErr").textContent="";
+  $("aPw").autocomplete=r?"new-password":"current-password";$("authDlg").showModal()}
+$("authBtn").onclick=async()=>{if(me){await api("/api/logout","POST",{});me=null;if(tab==="saved"||tab==="mine")tab="all";await load()}else openAuth(false)};
+$("aSwitch").onclick=()=>openAuth(!reg);$("aCancel").onclick=()=>$("authDlg").close();
+$("aGo").onclick=async()=>{
+  try{const d=await api(reg?"/api/register":"/api/login","POST",{name:$("aName").value,email:$("aEmail").value,password:$("aPw").value});
+    me=d.user;$("authDlg").close();$("aPw").value="";await load()}
+  catch(e){$("aErr").textContent=e.message}
+};
+$("authDlg").addEventListener("keydown",e=>{if(e.key==="Enter")$("aGo").click()});
+$("tabs").onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  if((b.dataset.t==="saved"||b.dataset.t==="mine")&&!me){needAuth();return}
+  tab=b.dataset.t;[...$("tabs").children].forEach(x=>x.classList.toggle("on",x===b));render()};
+["q","max","sort"].forEach(id=>$(id).addEventListener("input",render));
+$("grid").onclick=async e=>{
+  const c=e.target.closest("[data-c]"),f=e.target.closest("[data-f]"),d=e.target.closest("[data-d]"),w=e.target.closest(".wa-btn");
+  try{
+    if(c){const l=L.find(x=>x.id==c.dataset.c);$("cTitle").textContent=l.title;$("cBody").textContent="Contact: "+l.contact;$("contactDlg").showModal()}
+    if(f){const l=L.find(x=>x.id==f.dataset.f);await api("/api/favorites/"+l.id,l.saved?"DELETE":"PUT");l.saved=l.saved?0:1;render()}
+    if(d&&confirm("Delete this listing?")){await api("/api/listings/"+d.dataset.d,"DELETE");await load()}
+    if(w){const l=L.find(x=>x.id==w.dataset.id);const msg=`Hello! I'm interested in your listing: ${l.title} in ${l.city}. Price: $${l.price}/month. ${l.desc}. Contact: ${l.contact}`;window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank')}
+  }catch(err){alert(err.message)}
+};
+$("cClose").onclick=()=>$("contactDlg").close();
+$("postBtn").onclick=()=>me?$("postDlg").showModal():needAuth();
+$("cancel").onclick=()=>$("postDlg").close();
+$("save").onclick=async()=>{
+  try{await api("/api/listings","POST",{type:$("fType").value,title:$("fTitle").value,city:$("fCity").value,price:$("fPrice").value,desc:$("fDesc").value,contact:$("fContact").value});
+    ["fTitle","fCity","fPrice","fDesc","fContact"].forEach(i=>$(i).value="");$("postDlg").close();await load()}
+  catch(e){alert(e.message)}
+};
+(async()=>{try{me=(await api("/api/me")).user}catch(e){}await load()})();
+</script>
+</body>
+</html>
