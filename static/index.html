@@ -61,7 +61,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .card{
   background:var(--card);border:1px solid var(--line);border-radius:12px;
   padding:16px;display:flex;flex-direction:column;gap:8px;
+  scroll-margin-top:90px;transition:box-shadow .3s, border-color .3s;
 }
+.card.highlight{box-shadow:0 0 0 3px var(--accent);border-color:var(--accent)}
 .tag{
   align-self:flex-start;font-size:12px;font-weight:700;text-transform:uppercase;
   letter-spacing:.04em;color:var(--accent);
@@ -83,6 +85,7 @@ label{display:block;font-size:14px;margin:10px 0 4px;color:var(--muted)}
 .row2{display:flex;gap:8px;flex-wrap:wrap}
 .row2 button{flex:1;min-width:0}
 .row2 .wa-btn{flex:0 0 auto;background:var(--wa);color:#fff;border-color:var(--wa);font-weight:600}
+.row2 .icon-btn{flex:0 0 auto;padding:6px 10px;font-size:16px;line-height:1}
 .fav{font-size:18px;line-height:1;padding:6px 10px}
 .fav.on{color:var(--danger);border-color:var(--danger)}
 footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90px}
@@ -93,6 +96,13 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
   font-size:28px;box-shadow:0 4px 12px rgba(0,0,0,.3);
   display:flex;align-items:center;justify-content:center;
 }
+.toast{
+  position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);
+  background:#111827;color:#fff;padding:10px 16px;border-radius:8px;
+  font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+  z-index:2000;box-shadow:0 8px 20px rgba(0,0,0,.3);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (max-width:480px){
   .header-actions{width:100%;justify-content:flex-end}
 }
@@ -186,7 +196,9 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
   <h2 id="cTitle" style="margin:0 0 8px"></h2>
   <p id="cBody" class="meta"></p>
   <div class="row">
-    <button id="cWa" style="background:var(--wa);color:#fff;border-color:var(--wa)">Message on WhatsApp</button>
+    <button id="cCopy" type="button" class="icon-btn">🔗 Copy link</button>
+    <button id="cShare" type="button" class="icon-btn">📤 Share</button>
+    <button id="cWa" style="background:var(--wa);color:#fff;border-color:var(--wa)">WhatsApp</button>
     <button id="cClose">Close</button>
   </div>
 </dialog>
@@ -194,17 +206,92 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
 <footer>Meet in public places first and never send money before seeing a place in person.</footer>
 
 <button id="waFloat" class="wa-float" title="Chat with RoomMatch on WhatsApp" aria-label="Chat on WhatsApp">💬</button>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
 "use strict";
 const BUSINESS_WA = "14155238886";
-const state = { tab: "all", me: null, listings: [], reg: false };
+const state = { tab: "all", me: null, listings: [], reg: false, lastContact: null };
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;",
   }[c]));
 
+/* ---------- Toast helper ---------- */
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+/* ---------- Share helpers ---------- */
+function listingUrl(id) {
+  return `${location.origin}${location.pathname}#listing-${id}`;
+}
+
+function listingShareText(l) {
+  return (
+    `${l.title} — ${l.city} · $${Number(l.price).toLocaleString()}/mo ` +
+    `(${l.type})\n${listingUrl(l.id)}`
+  );
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (e) {}
+  // Fallback for non-secure contexts / older browsers
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function copyListingLink(l) {
+  const url = listingUrl(l.id);
+  const ok = await copyText(url);
+  if (ok) toast("Link copied: " + url);
+  else toast("Copy failed — long-press the URL");
+  return ok;
+}
+
+async function shareListing(l) {
+  const url = listingUrl(l.id);
+  const data = {
+    title: `${l.title} — RoomMatch`,
+    text: `${l.title} in ${l.city} · $${Number(l.price).toLocaleString()}/mo`,
+    url,
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share(data);
+      return;
+    } catch (e) {
+      if (e.name === "AbortError") return; // user cancelled
+    }
+  }
+  // Fallback
+  const ok = await copyText(`${data.text}\n${url}`);
+  toast(ok ? "Link copied to clipboard" : "Unable to share");
+}
+
+/* ---------- API ---------- */
 async function api(path, method = "GET", body) {
   const opts = { method, credentials: "same-origin" };
   if (body !== undefined) {
@@ -217,6 +304,7 @@ async function api(path, method = "GET", body) {
   return data;
 }
 
+/* ---------- Render ---------- */
 function updateHeader() {
   const loggedIn = !!state.me;
   $("acct").textContent = loggedIn ? "Hi, " + state.me.name : "";
@@ -253,7 +341,7 @@ function render() {
 
   $("grid").innerHTML = rows.length
     ? rows.map((l) => `
-      <article class="card">
+      <article class="card" id="listing-${l.id}" data-lid="${l.id}">
         <span class="tag">${esc(l.type)}</span>
         <h3>${esc(l.title)}</h3>
         <div class="price">$${Number(l.price).toLocaleString()} <small>/ month</small></div>
@@ -262,14 +350,33 @@ function render() {
         <div class="row2">
           <button class="primary" data-c="${l.id}">Contact</button>
           <button class="wa-btn" data-wa="${l.id}" title="Message on WhatsApp">💬</button>
+          <button class="icon-btn" data-copy="${l.id}" title="Copy link">🔗</button>
+          <button class="icon-btn" data-share="${l.id}" title="Share">📤</button>
           ${state.me ? `<button class="fav ${l.saved ? "on" : ""}" data-f="${l.id}" title="Save">♥</button>` : ""}
           ${l.mine ? `<button data-d="${l.id}">Delete</button>` : ""}
         </div>
       </article>
     `).join("")
     : '<div class="empty">No listings here yet.</div>';
+
+  // If URL already has a #listing-<id>, focus it after re-render
+  focusFromHash({ smooth: false });
 }
 
+/* ---------- Deep-link focus ---------- */
+function focusFromHash({ smooth = true } = {}) {
+  const m = location.hash.match(/^#listing-(\d+)$/);
+  if (!m) return;
+  const el = document.getElementById("listing-" + m[1]);
+  if (!el) return;
+  el.classList.add("highlight");
+  el.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" });
+  setTimeout(() => el.classList.remove("highlight"), 2500);
+}
+
+window.addEventListener("hashchange", () => focusFromHash());
+
+/* ---------- Load ---------- */
 async function load() {
   try {
     const data = await api("/api/listings");
@@ -289,6 +396,7 @@ async function loadMe() {
   }
 }
 
+/* ---------- Auth ---------- */
 function openAuth(register) {
   state.reg = register;
   $("aTitle").textContent = register ? "Create account" : "Sign in";
@@ -317,6 +425,7 @@ async function submitAuth() {
   }
 }
 
+/* ---------- Post ---------- */
 function openPost() {
   if (!state.me) { openAuth(false); return; }
   $("err").textContent = "";
@@ -348,18 +457,24 @@ async function submitPost() {
   }
 }
 
+/* ---------- Contact dialog ---------- */
 function openContact(listing) {
+  state.lastContact = listing;
   $("cTitle").textContent = listing.title;
   $("cBody").textContent = "Contact: " + listing.contact;
   $("cWa").onclick = () => {
     const msg =
       `Hello! I'm interested in your listing: ${listing.title} ` +
-      `in ${listing.city} ($${listing.price}/month). Contact: ${listing.contact}`;
+      `in ${listing.city} ($${listing.price}/month). Contact: ${listing.contact}\n` +
+      listingUrl(listing.id);
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   };
+  $("cCopy").onclick = () => copyListingLink(listing);
+  $("cShare").onclick = () => shareListing(listing);
   $("contactDlg").showModal();
 }
 
+/* ---------- Wiring ---------- */
 $("loginBtn").onclick = () => openAuth(false);
 $("registerBtn").onclick = () => openAuth(true);
 $("postBtn").onclick = openPost;
@@ -409,11 +524,15 @@ $("tabs").onclick = (e) => {
   $(id).addEventListener("change", render);
 });
 
+/* Event delegation for card actions */
 $("grid").addEventListener("click", async (e) => {
   const contactBtn = e.target.closest("[data-c]");
   const favBtn = e.target.closest("[data-f]");
   const delBtn = e.target.closest("[data-d]");
   const waBtn = e.target.closest("[data-wa]");
+  const copyBtn = e.target.closest("[data-copy]");
+  const shareBtn = e.target.closest("[data-share]");
+
   try {
     if (contactBtn) {
       const l = state.listings.find((x) => x.id == contactBtn.dataset.c);
@@ -434,10 +553,19 @@ $("grid").addEventListener("click", async (e) => {
       if (!l) return;
       const msg =
         `Hello! I'm interested in your listing: ${l.title} ` +
-        `in ${l.city} ($${l.price}/month). Contact: ${l.contact}`;
+        `in ${l.city} ($${l.price}/month). Contact: ${l.contact}\n` +
+        listingUrl(l.id);
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    } else if (copyBtn) {
+      const l = state.listings.find((x) => x.id == copyBtn.dataset.copy);
+      if (l) copyListingLink(l);
+    } else if (shareBtn) {
+      const l = state.listings.find((x) => x.id == shareBtn.dataset.share);
+      if (l) shareListing(l);
     }
-  } catch (err) { alert(err.message); }
+  } catch (err) {
+    alert(err.message);
+  }
 });
 
 $("waFloat").addEventListener("click", () => {
@@ -445,7 +573,12 @@ $("waFloat").addEventListener("click", () => {
   window.open(`https://wa.me/${BUSINESS_WA}?text=${msg}`, "_blank");
 });
 
-(async () => { await loadMe(); await load(); })();
+/* Boot */
+(async () => {
+  await loadMe();
+  await load();
+  focusFromHash({ smooth: true });
+})();
 </script>
 </body>
 </html>
