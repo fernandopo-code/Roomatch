@@ -198,7 +198,7 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
 <script>
 "use strict";
 const BUSINESS_WA = "14155238886";
-const state = { tab: "all", me: null, listings: [], reg: false };
+const state = { tab: "all", me: null, listings: [], reg: false, loading: true };
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({
@@ -231,6 +231,12 @@ function updateHeader() {
 
 function render() {
   updateHeader();
+
+  if (state.loading) {
+    $("grid").innerHTML = '<div class="empty">Loading listings…</div>';
+    return;
+  }
+
   const q = $("q").value.trim().toLowerCase();
   const max = parseFloat($("max").value);
   const sort = $("sort").value;
@@ -267,16 +273,19 @@ function render() {
         </div>
       </article>
     `).join("")
-    : '<div class="empty">No listings here yet.</div>';
+    : '<div class="empty">No listings match your filters. Try clearing the search or raising the max price.</div>';
 }
 
 async function load() {
+  state.loading = true;
+  render();
   try {
     const data = await api("/api/listings");
     state.listings = data.listings || [];
   } catch (e) {
     state.listings = [];
   }
+  state.loading = false;
   render();
 }
 
