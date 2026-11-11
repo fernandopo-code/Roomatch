@@ -73,11 +73,17 @@ def close_db(_):
     if d: d.close()
 
 def init_db():
+    # Determine the database path, fallback to local if /data is not writable
+    db_path = DB_PATH
     # Ensure the directory for the database exists
-    db_dir = os.path.dirname(DB_PATH)
+    db_dir = os.path.dirname(db_path)
     if db_dir and not os.path.exists(db_dir):
-        os.makedirs(db_dir, exist_ok=True)
-    c = sqlite3.connect(DB_PATH)
+        try:
+            os.makedirs(db_dir, exist_ok=True)
+        except PermissionError:
+            # Fall back to local database if /data is not writable (e.g., Render without persistent disk)
+            db_path = os.path.join(BASE, "roommatch.db")
+    c = sqlite3.connect(db_path)
     c.executescript(SCHEMA); c.commit(); c.close()
 init_db()
 
@@ -255,6 +261,9 @@ def listings():
         FROM listings l JOIN users u ON u.id=l.user_id ORDER BY l.id DESC LIMIT 500""", (u, u)).fetchall()
     return jsonify(listings=[dict(r) for r in rows])
 
+LISTING_FEE = 20
+APPLICATION_FEE = 15
+
 @app.post("/api/listings")
 def add_listing():
     u = current_user()
@@ -268,8 +277,8 @@ def add_listing():
     except (TypeError, ValueError): return err("Enter a valid price.")
     if not math.isfinite(price) or price < 0 or t not in ("Room", "Roommate", "Sublet") or not title or not city or not contact:
         return err("Please fill in type, title, city, price and contact.")
-    cur = db().execute("INSERT INTO listings(user_id,type,title,city,price,description,contact,created_at) VALUES(?,?,?,?,?,?,?,?)",
-                       (u["id"], t, title, city, price, desc, contact, int(time.time())))
+    cur = db().execute("INSERT INTO listings(user_id,type,title,city,price,description,contact,created_at,payment_status,payment_method,listing_fee,application_fee) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                       (u["id"], t, title, city, price, desc, contact, int(time.time()), "paid", "zelle", LISTING_FEE, APPLICATION_FEE))
     db().commit()
     return jsonify(id=cur.lastrowid), 201
 
@@ -316,4 +325,70 @@ def internal_error(e):
     return jsonify(error="Internal server error"), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+    init_db()
+    # Seed sample data if database is empty
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM listings")
+    count = c.fetchone()[0]
+    if count == 0:
+        # Insert sample users first (needed for foreign key constraints)
+        c.execute("INSERT OR IGNORE INTO users (email, name, password_hash, created_at, is_admin) VALUES (?, ?, ?, ?, ?)",
+                  ('admin@roommatch.test', 'Admin', 'hashed', 1700000000, 1))
+        c.execute("INSERT OR IGNORE INTO users (email, name, password_hash, created_at, is_admin) VALUES (?, ?, ?, ?, ?)",
+                  ('user1@roommatch.test', 'John Doe', 'hashed', 1700000000, 0))
+        c.execute("INSERT OR IGNORE INTO users (email, name, password_hash, created_at, is_admin) VALUES (?, ?, ?, ?, ?)",
+                  ('user2@roommatch.test', 'Jane Smith', 'hashed', 1700000000, 0))
+        # Now insert sample listings - Rooms (type=1), Roommates (type=2), Sublets (type=3)
+        # Each: (user_id, type, title, city, price, description, contact)
+        sample_listings = [
+            # Rooms - user_id=1
+            (1, "Room", "Cozy Studio in Manhattan", "New York", 1800,
+             "Sunny 1BR studio in Hell's Kitchen, modern appliances, gym access",
+             "john.doe@email.com"),
+            (1, "Room", "Downtown Brooklyn Apartment", "New York", 1500,
+             "2BR apartment in Downtown Brooklyn, close to transit, pet-friendly",
+             "jane.smith@email.com"),
+            (1, "Room", "Quiet Room in Queens", "New York", 950,
+             "Private room in shared house, quiet neighborhood, parking available",
+             "mike.brown@email.com"),
+            (1, "Room", "Luxury Upper West Side", "New York", 2200,
+             "Executive studio with doorman, concierge, fitness center",
+             "lisa.white@email.com"),
+            # Roommates - user_id=2
+            (2, "Roommate", "Looking for roommate in Manhattan", "New York", 800,
+             "Male roommate wanted, clean, non-smoker, $800 share",
+             "roommate.seek@email.com"),
+            (2, "Roommate", "Female roommate needed in Brooklyn", "New York", 750,
+             "Friendly female roommate, $750/month, close to subway",
+             "roommate2.seek@email.com"),
+            (2, "Roommate", "Silent roommate needed in Queens", "New York", 650,
+             "Looking for quiet professional roommate, $650/month",
+             "quiet.roommate@email.com"),
+            # Sublets - user_id=3
+            (3, "Sublet", "Fully furnished sublet in Tribeca", "New York", 3000,
+             "Fully furnished 1BR sublet, 3-month lease, luxury building",
+             "sublet.tribeca@email.com"),
+            (3, "Sublet", "Short-term sublet in Bed-Stuy", "New York", 1600,
+             "Charming sublet in historic Brownstone, 6-month lease",
+             "sublet.bedstuy@email.com"),
+            (3, "Sublet", "Corporate sublet in Midtown", "New York", 2800,
+             "Corporate housing, 1-month minimum, all utilities included",
+             "corporate.sublet@email.com"),
+        ]
+        for user_id, lst_type, title, city, price, desc, contact in sample_listings:
+            c.execute("""INSERT INTO listings
+                       (user_id, type, title, city, price, description, contact, created_at,
+                        payment_status, payment_method, listing_fee, application_fee)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                      (user_id, lst_type, title, city, price, desc, contact,
+                       1700000000, 'pending', 'zelle', 20, 15))
+        conn.commit()
+        print("Added " + str(len(sample_listings)) + " sample NYC listings!")
+    else:
+        print("Listings already exist - skipping seed data.")
+    conn.close()
+    
+    print("\nDatabase seeding complete!")
+    print("Run 'python app.py' to start the RoomMatch server.")
