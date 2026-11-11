@@ -137,7 +137,6 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
 <div class="hint" id="hint"></div>
 <main class="grid" id="grid"></main>
 
-<!-- POST LISTING DIALOG -->
 <dialog id="postDlg">
   <h2 style="margin:0 0 4px">Post a listing</h2>
   <label>Type</label>
@@ -163,7 +162,6 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
   </div>
 </dialog>
 
-<!-- LOGIN / REGISTER DIALOG -->
 <dialog id="authDlg">
   <h2 id="aTitle" style="margin:0 0 4px">Sign in</h2>
   <div id="nameWrap" hidden>
@@ -184,7 +182,6 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
   </div>
 </dialog>
 
-<!-- CONTACT DIALOG -->
 <dialog id="contactDlg">
   <h2 id="cTitle" style="margin:0 0 8px"></h2>
   <p id="cBody" class="meta"></p>
@@ -196,17 +193,12 @@ footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 20px 90p
 
 <footer>Meet in public places first and never send money before seeing a place in person.</footer>
 
-<!-- FLOATING WHATSAPP BUTTON -->
 <button id="waFloat" class="wa-float" title="Chat with RoomMatch on WhatsApp" aria-label="Chat on WhatsApp">💬</button>
 
 <script>
 "use strict";
-
-// Business WhatsApp number (E.164 digits only, no '+'). Replace with your own.
 const BUSINESS_WA = "14155238886";
-
 const state = { tab: "all", me: null, listings: [], reg: false };
-
 const $ = (id) => document.getElementById(id);
 const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({
@@ -239,7 +231,6 @@ function updateHeader() {
 
 function render() {
   updateHeader();
-
   const q = $("q").value.trim().toLowerCase();
   const max = parseFloat($("max").value);
   const sort = $("sort").value;
@@ -298,7 +289,6 @@ async function loadMe() {
   }
 }
 
-/* ---------- Auth dialog ---------- */
 function openAuth(register) {
   state.reg = register;
   $("aTitle").textContent = register ? "Create account" : "Sign in";
@@ -313,10 +303,7 @@ function openAuth(register) {
 }
 
 async function submitAuth() {
-  const body = {
-    email: $("aEmail").value.trim(),
-    password: $("aPw").value,
-  };
+  const body = { email: $("aEmail").value.trim(), password: $("aPw").value };
   if (state.reg) body.name = $("aName").value.trim();
   try {
     const data = await api(state.reg ? "/api/register" : "/api/login", "POST", body);
@@ -330,12 +317,8 @@ async function submitAuth() {
   }
 }
 
-/* ---------- Post dialog ---------- */
 function openPost() {
-  if (!state.me) {
-    openAuth(false);
-    return;
-  }
+  if (!state.me) { openAuth(false); return; }
   $("err").textContent = "";
   $("postDlg").showModal();
   setTimeout(() => $("fTitle").focus(), 30);
@@ -365,7 +348,6 @@ async function submitPost() {
   }
 }
 
-/* ---------- Contact dialog ---------- */
 function openContact(listing) {
   $("cTitle").textContent = listing.title;
   $("cBody").textContent = "Contact: " + listing.contact;
@@ -378,11 +360,9 @@ function openContact(listing) {
   $("contactDlg").showModal();
 }
 
-/* ---------- Event wiring ---------- */
 $("loginBtn").onclick = () => openAuth(false);
 $("registerBtn").onclick = () => openAuth(true);
 $("postBtn").onclick = openPost;
-
 $("logoutBtn").onclick = async () => {
   try { await api("/api/logout", "POST", {}); } catch (e) {}
   state.me = null;
@@ -416,10 +396,7 @@ $("tabs").onclick = (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   const t = b.dataset.t;
-  if ((t === "saved" || t === "mine") && !state.me) {
-    openAuth(false);
-    return;
-  }
+  if ((t === "saved" || t === "mine") && !state.me) { openAuth(false); return; }
   state.tab = t;
   document.querySelectorAll("#tabs button").forEach((x) =>
     x.classList.toggle("on", x === b)
@@ -437,7 +414,6 @@ $("grid").addEventListener("click", async (e) => {
   const favBtn = e.target.closest("[data-f]");
   const delBtn = e.target.closest("[data-d]");
   const waBtn = e.target.closest("[data-wa]");
-
   try {
     if (contactBtn) {
       const l = state.listings.find((x) => x.id == contactBtn.dataset.c);
@@ -461,9 +437,7 @@ $("grid").addEventListener("click", async (e) => {
         `in ${l.city} ($${l.price}/month). Contact: ${l.contact}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
     }
-  } catch (err) {
-    alert(err.message);
-  }
+  } catch (err) { alert(err.message); }
 });
 
 $("waFloat").addEventListener("click", () => {
@@ -471,11 +445,7 @@ $("waFloat").addEventListener("click", () => {
   window.open(`https://wa.me/${BUSINESS_WA}?text=${msg}`, "_blank");
 });
 
-// Boot
-(async () => {
-  await loadMe();
-  await load();
-})();
+(async () => { await loadMe(); await load(); })();
 </script>
 </body>
 </html>
