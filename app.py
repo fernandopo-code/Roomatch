@@ -34,7 +34,6 @@ def _secret():
 
 app.secret_key = _secret()
 
-# Twilio WhatsApp config
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_WHATSAPP_NUMBER = os.environ.get(
@@ -459,79 +458,304 @@ def internal_error(e):
     return jsonify(error="Internal server error"), 500
 
 
+# ---------------------------------------------------------------------------
+# SEED DATA
+# ---------------------------------------------------------------------------
+
+SEED_USERS = [
+    # email, name, password, is_admin
+    ("admin@roommatch.test", "Admin", "adminpass123", 1),
+    ("alex@roommatch.test", "Alex Rivera", "password123", 0),
+    ("jamie@roommatch.test", "Jamie Chen", "password123", 0),
+    ("morgan@roommatch.test", "Morgan Patel", "password123", 0),
+    ("taylor@roommatch.test", "Taylor Brooks", "password123", 0),
+    ("casey@roommatch.test", "Casey Nguyen", "password123", 0),
+    ("riley@roommatch.test", "Riley Johnson", "password123", 0),
+    ("drew@roommatch.test", "Drew Martinez", "password123", 0),
+]
+
+# Each tuple: (owner_email, type, title, city, price, description, contact)
+SEED_LISTINGS = [
+    # ------------------------- ROOMS (12) -------------------------
+    ("alex@roommatch.test", "Room",
+     "Sunny Studio in Hell's Kitchen",
+     "New York, NY", 1850,
+     "Bright 1BR studio, hardwood floors, walk-in closet. Steps from the C/E "
+     "subway. Building has gym, doorman, and roof deck. Utilities included.",
+     "alex.rivera@email.com"),
+
+    ("alex@roommatch.test", "Room",
+     "Private Room in Downtown Brooklyn",
+     "Brooklyn, NY", 1300,
+     "Furnished private room in a 3BR walk-up, shared kitchen and bath with "
+     "two friendly roommates. 5 min to Atlantic Terminal. Pet friendly.",
+     "alex.rivera@email.com"),
+
+    ("jamie@roommatch.test", "Room",
+     "Quiet Room in Astoria",
+     "Queens, NY", 1050,
+     "Private room in a shared house, quiet street, off-street parking. "
+     "Laundry on-site. 15 min walk to N/W. Non-smoking preferred.",
+     "jamie.chen@email.com"),
+
+    ("jamie@roommatch.test", "Room",
+     "Modern 1BR in Capitol Hill",
+     "Seattle, WA", 1750,
+     "Modern 1BR with in-unit washer/dryer and balcony. Walk to Whole Foods "
+     "and light rail. Cat okay with small deposit.",
+     "jamie.chen@email.com"),
+
+    ("morgan@roommatch.test", "Room",
+     "Sunny Room Near UT Campus",
+     "Austin, TX", 900,
+     "Bright room in a 4BR house, 10 min bike to UT. Shared kitchen, backyard "
+     "with grill. Utilities split evenly. Grad students welcome.",
+     "morgan.patel@email.com"),
+
+    ("morgan@roommatch.test", "Room",
+     "Furnished Room in Wicker Park",
+     "Chicago, IL", 1100,
+     "Furnished room in a 2BR flat. Exposed brick, hardwood floors, walk to "
+     "Blue Line. 1-year lease preferred, short-term considered.",
+     "morgan.patel@email.com"),
+
+    ("taylor@roommatch.test", "Room",
+     "Room in Mission District Victorian",
+     "San Francisco, CA", 2100,
+     "Charming room in a 4BR Victorian. Shared kitchen with two roommates. "
+     "Walk to BART, cafes, and Dolores Park. Clean and quiet household.",
+     "taylor.brooks@email.com"),
+
+    ("taylor@roommatch.test", "Room",
+     "Private Room in Capitol Hill",
+     "Denver, CO", 1200,
+     "Private room in a townhouse. Shared living room, kitchen, and patio. "
+     "Walk to Cheesman Park. Dog-friendly building.",
+     "taylor.brooks@email.com"),
+
+    ("casey@roommatch.test", "Room",
+     "Ocean-view Room in Santa Monica",
+     "Santa Monica, CA", 2200,
+     "Light-filled room in a 2BR apartment, 3 blocks to the beach. Building "
+     "has pool and gym. 6-month minimum. No pets, sorry.",
+     "casey.nguyen@email.com"),
+
+    ("casey@roommatch.test", "Room",
+     "Cozy Room in Beacon Hill",
+     "Boston, MA", 1500,
+     "Historic brownstone, gas fireplace, bay windows. Shared with one other "
+     "professional. Heat and hot water included. Walk to MGH.",
+     "casey.nguyen@email.com"),
+
+    ("riley@roommatch.test", "Room",
+     "Modern Room Near Midtown",
+     "Atlanta, GA", 1150,
+     "Room in a new construction high-rise. Rooftop pool, gym, co-working "
+     "lounge. 5 min walk to MARTA. Internet included.",
+     "riley.johnson@email.com"),
+
+    ("riley@roommatch.test", "Room",
+     "Bright Room in Wynwood",
+     "Miami, FL", 1400,
+     "Bright room in a 2BR apartment near Wynwood Walls. Shared kitchen and "
+     "living room. 10 min drive to the beach. Utilities included.",
+     "riley.johnson@email.com"),
+
+    # ------------------------- ROOMMATES (10) -------------------------
+    ("drew@roommatch.test", "Roommate",
+     "Looking for roommate in Bushwick",
+     "Brooklyn, NY", 950,
+     "Two professionals seeking a third to share a 3BR loft. Rent $950/mo + "
+     "utilities. Clean, respectful, no drama. Must be employed and pet-free.",
+     "drew.martinez@email.com"),
+
+    ("drew@roommatch.test", "Roommate",
+     "Female roommate wanted in Lakeview",
+     "Chicago, IL", 900,
+     "28F professional seeking a female roommate for a 2BR near Wrigley. Rent "
+     "$900 + utilities. Night owl okay. Shared Netflix and coffee. Non-smoker.",
+     "drew.martinez@email.com"),
+
+    ("alex@roommatch.test", "Roommate",
+     "Roommate needed in Silver Lake",
+     "Los Angeles, CA", 1100,
+     "Creative professional looking for a roommate for a 2BR bungalow. Rent "
+     "$1100 + utilities. Vegetarian household. Street parking.",
+     "alex.rivera@email.com"),
+
+    ("jamie@roommatch.test", "Roommate",
+     "Grad student seeking roommate",
+     "Boston, MA", 1200,
+     "PhD student looking for a quiet roommate in a 2BR in Cambridge. $1200/mo "
+     "+ utilities. No parties. Study-heavy household. Cat okay.",
+     "jamie.chen@email.com"),
+
+    ("morgan@roommatch.test", "Roommate",
+     "Roommate wanted in South Congress",
+     "Austin, TX", 850,
+     "Looking for a roommate for a 2BR near SoCo. $850 + utilities. Chill "
+     "household, weekend BBQs. Must love dogs, we have one.",
+     "morgan.patel@email.com"),
+
+    ("taylor@roommatch.test", "Roommate",
+     "Clean roommate needed in Fremont",
+     "Seattle, WA", 1000,
+     "Seeking a clean, respectful roommate for a 2BR near Google campus. "
+     "$1000 + utilities. No smoking inside. Quiet weeknight household.",
+     "taylor.brooks@email.com"),
+
+    ("casey@roommatch.test", "Roommate",
+     "Roommate for 2BR in Mission",
+     "San Francisco, CA", 1600,
+     "Looking for a friendly roommate in the Mission. $1600/mo + utilities. "
+     "Shared kitchen and living room. 9-5 professional preferred.",
+     "casey.nguyen@email.com"),
+
+    ("riley@roommatch.test", "Roommate",
+     "Roommate wanted in Capitol Hill",
+     "Denver, CO", 800,
+     "Three people looking for a fourth in a 4BR house. $800 + utilities. "
+     "Shared chores, quiet household, mountain weekend trips.",
+     "riley.johnson@email.com"),
+
+    ("drew@roommatch.test", "Roommate",
+     "Looking for a roommate near U Street",
+     "Washington, DC", 1050,
+     "Government professional seeking a roommate for a 2BR in Shaw. $1050 + "
+     "utilities. Walk to metro. No pets, clean and quiet preferred.",
+     "drew.martinez@email.com"),
+
+    ("taylor@roommatch.test", "Roommate",
+     "Roommate in Philadelphia for fall",
+     "Philadelphia, PA", 750,
+     "Seeking a roommate for a 2BR in Fishtown starting September. $750 + "
+     "utilities. Bike-friendly, two cats. Monthly board game night.",
+     "taylor.brooks@email.com"),
+
+    # ------------------------- SUBLETS (8) -------------------------
+    ("casey@roommatch.test", "Sublet",
+     "Furnished sublet in Tribeca",
+     "New York, NY", 3000,
+     "Fully furnished 1BR sublet in a luxury building. 3-month lease, Feb-Apr. "
+     "Doorman, gym, laundry. All utilities included.",
+     "casey.nguyen@email.com"),
+
+    ("casey@roommatch.test", "Sublet",
+     "Summer sublet near Harvard",
+     "Cambridge, MA", 1800,
+     "Bright 1BR sublet, June-August. 5 min walk to Harvard Yard. Fully "
+     "furnished with utilities included. Perfect for a summer internship.",
+     "casey.nguyen@email.com"),
+
+    ("alex@roommatch.test", "Sublet",
+     "Short-term sublet in Bed-Stuy",
+     "Brooklyn, NY", 1600,
+     "Charming sublet in a historic brownstone. 6-month lease, flexible "
+     "start. Hardwood floors, shared garden, cat-friendly.",
+     "alex.rivera@email.com"),
+
+    ("jamie@roommatch.test", "Sublet",
+     "Sublet in Capitol Hill townhouse",
+     "Seattle, WA", 1500,
+     "Nice sublet in a Capitol Hill townhouse. 3-month lease. Close to bars, "
+     "restaurants, and light rail. Utilities + WiFi included.",
+     "jamie.chen@email.com"),
+
+    ("morgan@roommatch.test", "Sublet",
+     "Summer sublet in Logan Square",
+     "Chicago, IL", 1200,
+     "Furnished sublet, May-August. 1BR + office. Walk to Blue Line. Perfect "
+     "for interns or summer travelers. No smoking.",
+     "morgan.patel@email.com"),
+
+    ("taylor@roommatch.test", "Sublet",
+     "Downtown LA sublet with view",
+     "Los Angeles, CA", 2000,
+     "High-rise sublet with skyline views. 4-month lease. Pool, gym, valet "
+     "parking. Walk to Crypto.com Arena and Whole Foods.",
+     "taylor.brooks@email.com"),
+
+    ("riley@roommatch.test", "Sublet",
+     "Corporate sublet in Midtown",
+     "New York, NY", 2800,
+     "Corporate-style sublet, 1-month minimum. All utilities and weekly "
+     "cleaning included. Steps from Grand Central.",
+     "riley.johnson@email.com"),
+
+    ("drew@roommatch.test", "Sublet",
+     "Furnished sublet near Vanderbilt",
+     "Nashville, TN", 1400,
+     "3-month sublet, furnished, near Vanderbilt. 2BR townhome. Fenced "
+     "backyard. Perfect for traveling nurses or visiting faculty.",
+     "drew.martinez@email.com"),
+]
+
+
 def seed():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
+
     c.execute("SELECT COUNT(*) FROM listings")
-    if c.fetchone()[0] == 0:
-        c.execute(
-            "INSERT OR IGNORE INTO users "
-            "(email, name, password_hash, created_at, is_admin) "
-            "VALUES (?, ?, ?, ?, ?)",
-            ("admin@roommatch.test", "Admin",
-             generate_password_hash("adminpass123"), 1700000000, 1),
+    if c.fetchone()[0] > 0:
+        print("Seed data already present — skipping.")
+        conn.close()
+        return
+
+    print("Seeding demo users and listings...")
+    email_to_id = {}
+    now = int(time.time())
+
+    for email, name, pw, is_admin in SEED_USERS:
+        existing = c.execute(
+            "SELECT id FROM users WHERE email=?", (email,)
+        ).fetchone()
+        if existing:
+            email_to_id[email] = existing["id"]
+            continue
+        cur = c.execute(
+            "INSERT INTO users(email,name,password_hash,created_at,is_admin) "
+            "VALUES(?,?,?,?,?)",
+            (email, name, generate_password_hash(pw), now, is_admin),
         )
+        email_to_id[email] = cur.lastrowid
+
+    # Insert listings; stagger created_at so the "Newest" sort is meaningful
+    base_ts = now - (len(SEED_LISTINGS) * 3600)
+    for i, (owner_email, ltype, title, city, price, desc, contact) in enumerate(SEED_LISTINGS):
+        owner_id = email_to_id[owner_email]
+        created = base_ts + (i * 3600)  # 1 hour apart, oldest first
         c.execute(
-            "INSERT OR IGNORE INTO users "
-            "(email, name, password_hash, created_at, is_admin) "
-            "VALUES (?, ?, ?, ?, ?)",
-            ("user1@roommatch.test", "John Doe",
-             generate_password_hash("password123"), 1700000000, 0),
+            """INSERT INTO listings
+            (user_id, type, title, city, price, description, contact, created_at,
+             payment_status, payment_method, listing_fee, application_fee)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (owner_id, ltype, title, city, price, desc, contact, created,
+             "paid", "zelle", LISTING_FEE, APPLICATION_FEE),
         )
-        c.execute(
-            "INSERT OR IGNORE INTO users "
-            "(email, name, password_hash, created_at, is_admin) "
-            "VALUES (?, ?, ?, ?, ?)",
-            ("user2@roommatch.test", "Jane Smith",
-             generate_password_hash("password123"), 1700000000, 0),
-        )
-        c.execute("SELECT id FROM users ORDER BY id")
-        user_ids = [row[0] for row in c.fetchall()]
-        uid1, uid2, uid3 = user_ids[0], user_ids[1], user_ids[2]
-        sample = [
-            (uid1, "Room", "Cozy Studio in Manhattan", "New York", 1800,
-             "Sunny studio in Hell's Kitchen, modern appliances, gym access",
-             "john.doe@email.com"),
-            (uid1, "Room", "Downtown Brooklyn Apartment", "New York", 1500,
-             "2BR apartment in Downtown Brooklyn, close to transit, pet-friendly",
-             "jane.smith@email.com"),
-            (uid2, "Room", "Quiet Room in Queens", "New York", 950,
-             "Private room in shared house, quiet neighborhood, parking available",
-             "mike.brown@email.com"),
-            (uid2, "Roommate", "Looking for roommate in Manhattan", "New York", 800,
-             "Male roommate wanted, clean, non-smoker, $800 share",
-             "roommate.seek@email.com"),
-            (uid2, "Roommate", "Female roommate needed in Brooklyn", "New York", 750,
-             "Friendly female roommate, $750/month, close to subway",
-             "roommate2.seek@email.com"),
-            (uid3, "Sublet", "Fully furnished sublet in Tribeca", "New York", 3000,
-             "Fully furnished 1BR sublet, 3-month lease, luxury building",
-             "sublet.tribeca@email.com"),
-            (uid3, "Sublet", "Short-term sublet in Bed-Stuy", "New York", 1600,
-             "Charming sublet in historic Brownstone, 6-month lease",
-             "sublet.bedstuy@email.com"),
-            (uid3, "Sublet", "Corporate sublet in Midtown", "New York", 2800,
-             "Corporate housing, 1-month minimum, all utilities included",
-             "corporate.sublet@email.com"),
-        ]
-        for uid, ltype, title, city, price, desc, contact in sample:
-            c.execute(
-                """INSERT INTO listings
-                (user_id, type, title, city, price, description, contact, created_at,
-                 payment_status, payment_method, listing_fee, application_fee)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (uid, ltype, title, city, price, desc, contact,
-                 1700000000, "paid", "zelle", LISTING_FEE, APPLICATION_FEE),
-            )
-        conn.commit()
-        print(f"Seeded {len(sample)} sample listings.")
-    else:
-        print("Listings already exist - skipping seed.")
+
+    conn.commit()
+    counts = {
+        row["type"]: row["n"]
+        for row in c.execute(
+            "SELECT type, COUNT(*) AS n FROM listings GROUP BY type"
+        ).fetchall()
+    }
     conn.close()
+
+    print(
+        f"Seeded {len(SEED_USERS)} users and {len(SEED_LISTINGS)} listings "
+        f"({counts.get('Room', 0)} rooms, "
+        f"{counts.get('Roommate', 0)} roommates, "
+        f"{counts.get('Sublet', 0)} sublets)."
+    )
+    print("Demo logins (password shown after email):")
+    for email, _, pw, is_admin in SEED_USERS:
+        tag = " [admin]" if is_admin else ""
+        print(f"  {email} / {pw}{tag}")
 
 
 if __name__ == "__main__":
     seed()
-    print("\nRoomMatch running.")
+    print("\nRoomMatch running at http://localhost:5000\n")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
