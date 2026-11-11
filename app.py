@@ -5,6 +5,7 @@ from twilio.rest import Client
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE, "roommatch.db"))
+LISTING_FEE = 20
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.config.update(
@@ -38,7 +39,8 @@ CREATE TABLE IF NOT EXISTS users(
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   name TEXT NOT NULL,
   password_hash TEXT NOT NULL,
-  created_at INTEGER NOT NULL);
+  created_at INTEGER NOT NULL,
+  is_admin INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS listings(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -185,6 +187,56 @@ def whatsapp_status():
     if twilio_client:
         return jsonify(status="active", twilio_configured=bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN))
     return jsonify(status="inactive", twilio_configured=False)
+
+@app.get("/api/listings/<int:lid>/payment")
+def listing_payment(lid):
+    """Check payment status for a listing."""
+    u = current_user()
+    if not u: return err("Please sign in.", 401)
+    cur = db().execute("SELECT payment_status, payment_method, listing_fee, application_fee FROM listings WHERE id=?", (lid,)).fetchone()
+    if not cur: return err("Listing not found.", 404)
+    if cur["user_id"] != u["id"] and not u.get("is_admin", False): return err("Access denied.", 403)
+    return jsonify({
+        "payment_status": cur["payment_status"],
+        "payment_method": cur["payment_method"],
+        "listing_fee": cur["listing_fee"],
+        "application_fee": cur["application_fee"]
+    })
+
+@app.post("/api/listings/<int:lid>/confirm-payment")
+def confirm_payment(lid):
+    """Mark payment as complete (admin only)."""
+    u = current_user()
+    if not u: return err("Please sign in.", 401)
+    if not u.get("is_admin", False): return err("Admin access required.", 403)
+    db().execute("UPDATE listings SET payment_status='paid' WHERE id=?", (lid,))
+    db().commit()
+    return jsonify(ok=True, payment_status="paid")
+
+@app.get("/api/payment-methods")
+def payment_methods():
+    """Get available payment methods and instructions."""
+    methods = [
+        {
+            "key": "zelle",
+            "name": "Zelle",
+            "instructions": "Transfer to: roommatch@roommatch.example",
+            "fee": LISTING_FEE
+        },
+        {
+            "key": "cashapp",
+            "name": "CashApp",
+            "instructions": "$RoomMatchHousing",
+            "fee": LISTING_FEE
+        },
+        {
+            "key": "usdt",
+            "name": "USDT (Tether)",
+            "instructions": "Wallet: 0xRoomMatch123456789",
+            "fee": LISTING_FEE
+        }
+    ]
+    return jsonify(methods=methods)
 @app.get("/api/me")
 def me():
     u = current_user()
