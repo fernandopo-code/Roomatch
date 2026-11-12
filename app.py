@@ -8,7 +8,18 @@ except ImportError:
     Client = None
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE, "roommatch.db"))
+# Render provides /var/data/ for persistent storage
+# Try Render path first, then /data/, then local fallback
+DB_PATH_FROM_ENV = os.environ.get("DB_PATH")
+if DB_PATH_FROM_ENV:
+    DB_PATH = DB_PATH_FROM_ENV
+elif os.path.exists("/var/data/roommatch.db"):
+    DB_PATH = "/var/data/roommatch.db"
+elif os.path.exists("/data/roommatch.db"):
+    DB_PATH = "/data/roommatch.db"
+else:
+    # Fall back to local roommatch.db for development
+    DB_PATH = os.path.join(BASE, "roommatch.db")
 LISTING_FEE = 20
 APPLICATION_FEE = 15
 
@@ -36,8 +47,9 @@ app.secret_key = _secret()
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+# Use provided phone number as contact for initial listings
 TWILIO_WHATSAPP_NUMBER = os.environ.get(
-    "TWILIO_WHATSAPP_NUMBER", "whatsapp:+14155238886"
+    "TWILIO_WHATSAPP_NUMBER", "+1 412 254 8232"
 )
 
 twilio_client = None
